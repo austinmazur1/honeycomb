@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import { useSupabaseClient } from '@/lib/supabase';
-import type { Category } from '@/lib/database.types';
-import { useUser } from '@clerk/expo';
+import type { Category } from "@/lib/database.types";
+import { useSupabaseClient } from "@/lib/supabase";
+import { useUser } from "@clerk/expo";
 
 export function useCategories() {
   const supabase = useSupabaseClient();
@@ -12,10 +12,13 @@ export function useCategories() {
 
   const refetch = useCallback(async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.from('categories').select('*').order('name');
+    const { data, error } = await supabase
+      .from("categories")
+      .select("*")
+      .order("name");
 
     if (error) {
-      console.error('Failed to load categories', error);
+      console.error("Failed to load categories", error);
     } else {
       setCategories(data ?? []);
     }
@@ -23,20 +26,23 @@ export function useCategories() {
   }, [supabase]);
 
   useEffect(() => {
+    console.log("Fetching categories");
     refetch();
   }, [refetch]);
 
   const createCategory = useCallback(
     async (name: string) => {
-      if (!user) throw new Error('Not signed in');
+      if (!user) throw new Error("Not signed in");
       const { data, error } = await supabase
-        .from('categories')
+        .from("categories")
         .insert({ owner_user_id: user.id, name: name.trim() })
         .select()
         .single();
 
       if (error) throw error;
-      setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      setCategories((prev) =>
+        [...prev, data].sort((a, b) => a.name.localeCompare(b.name)),
+      );
       return data;
     },
     [supabase, user],

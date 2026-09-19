@@ -1,17 +1,17 @@
-import 'react-native-url-polyfill/auto';
+import "react-native-url-polyfill/auto";
 
-import { useAuth } from '@clerk/expo';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { useEffect } from 'react';
+import { useAuth } from "@clerk/expo";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { useEffect } from "react";
 
-import type { Database } from '@/lib/database.types';
+import type { Database } from "@/lib/database.types";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
-    'Missing EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY. Copy .env.example to .env and fill them in.',
+    "Missing EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY. Copy .env.example to .env and fill them in.",
   );
 }
 

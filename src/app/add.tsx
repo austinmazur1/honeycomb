@@ -1,6 +1,9 @@
-import { useUser } from '@clerk/expo';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCategories } from "@/hooks/use-categories";
+import { useSupabaseClient } from "@/lib/supabase";
+import { useUser } from "@clerk/expo";
+import { useRouter } from "expo-router";
+import { useShareIntentContext } from "expo-share-intent";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -9,21 +12,15 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { useCategories } from '@/hooks/use-categories';
-import { useTheme } from '@/hooks/use-theme';
-import { fetchLinkMetadata } from '@/lib/link-metadata';
-import { inferPlatform } from '@/lib/platform';
-import { useSupabaseClient } from '@/lib/supabase';
-
-// TODO(milestone 5): when arriving via the OS share sheet, expo-share-intent's
-// useShareIntentContext() will prefill `url`/`title`/`thumbnailUrl` here instead
-// of the user typing a URL manually. The form/save logic below is unchanged either way.
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Spacing } from "@/constants/theme";
+import { useTheme } from "@/hooks/use-theme";
+import { fetchLinkMetadata } from "@/lib/link-metadata";
+import { inferPlatform } from "@/lib/platform";
 
 export default function AddSaveScreen() {
   const router = useRouter();
@@ -32,53 +29,57 @@ export default function AddSaveScreen() {
   const { user } = useUser();
   const supabase = useSupabaseClient();
   const { categories, createCategory } = useCategories();
+  const { hasShareIntent, shareIntent, resetShareIntent } =
+    useShareIntentContext();
 
-  const [url, setUrl] = useState('');
-  const [title, setTitle] = useState('');
-  const [tagsText, setTagsText] = useState('');
+  const [url, setUrl] = useState("");
+  const [title, setTitle] = useState("");
+  const [tagsText, setTagsText] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const consumedShareIntent = useRef(false);
+
+  async function lookupMetadata(sourceUrl: string) {
+    setIsFetchingMetadata(true);
+    const metadata = await fetchLinkMetadata(sourceUrl);
+    setIsFetchingMetadata(false);
+
+    if (metadata.title) setTitle((current) => current || metadata.title!);
+    if (metadata.thumbnailUrl) setThumbnailUrl(metadata.thumbnailUrl);
+  }
 
   async function handleUrlBlur() {
     const trimmed = url.trim();
     if (!trimmed || title.trim()) return; // don't clobber a title the user already typed
-
-    setIsFetchingMetadata(true);
-    const metadata = await fetchLinkMetadata(trimmed);
-    setIsFetchingMetadata(false);
-
-    if (metadata.title) setTitle(metadata.title);
-    if (metadata.thumbnailUrl) setThumbnailUrl(metadata.thumbnailUrl);
+    await lookupMetadata(trimmed);
   }
 
   async function handleAddCategory() {
     const name = newCategoryName.trim();
     setIsAddingCategory(false);
-    setNewCategoryName('');
+    setNewCategoryName("");
     if (!name) return;
     try {
       const category = await createCategory(name);
       setCategoryId(category.id);
     } catch (error) {
-      console.error('Failed to create category', error);
+      console.error("Failed to create category", error);
     }
   }
 
   async function handleSave() {
     const trimmedUrl = url.trim();
     if (!trimmedUrl || !user) return;
-
     setIsSaving(true);
     const tags = tagsText
-      .split(',')
+      .split(",")
       .map((tag) => tag.trim())
       .filter(Boolean);
-
-    const { error } = await supabase.from('saves').insert({
+    const { error } = await supabase.from("saves").insert({
       owner_user_id: user.id,
       url: trimmedUrl,
       platform: inferPlatform(trimmedUrl),
@@ -87,22 +88,44 @@ export default function AddSaveScreen() {
       category_id: categoryId,
       tags,
     });
-
     setIsSaving(false);
     if (error) {
-      console.error('Failed to save', error);
+      console.error("Failed to save", error);
       return;
     }
+    router.prefetch("/(app)");
     router.back();
   }
+
+  // Prefill from the OS share sheet, once, the first time a share intent shows up.
+  useEffect(() => {
+    if (!hasShareIntent || consumedShareIntent.current) return;
+    consumedShareIntent.current = true;
+    const sharedUrl = shareIntent.webUrl ?? shareIntent.text ?? "";
+    if (!sharedUrl) return;
+    setUrl(sharedUrl);
+    if (shareIntent.meta?.title) setTitle(shareIntent.meta.title);
+    lookupMetadata(sharedUrl);
+  }, [hasShareIntent, shareIntent]);
+
+  // Clear the native share buffer once this screen is done with it.
+  useEffect(() => {
+    return () => {
+      resetShareIntent();
+    };
+  }, [resetShareIntent]);
 
   const canSave = url.trim().length > 0 && !isSaving;
 
   return (
     <ScrollView
       style={{ backgroundColor: theme.background }}
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.six }]}
-      keyboardShouldPersistTaps="handled">
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: insets.bottom + Spacing.six },
+      ]}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.field}>
         <ThemedText type="small" themeColor="textSecondary">
           Link
@@ -116,7 +139,10 @@ export default function AddSaveScreen() {
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
-          style={[styles.input, { backgroundColor: theme.backgroundElement, color: theme.text }]}
+          style={[
+            styles.input,
+            { backgroundColor: theme.backgroundElement, color: theme.text },
+          ]}
         />
       </View>
 
@@ -132,7 +158,10 @@ export default function AddSaveScreen() {
           onChangeText={setTitle}
           placeholder="What is this?"
           placeholderTextColor={theme.textSecondary}
-          style={[styles.input, { backgroundColor: theme.backgroundElement, color: theme.text }]}
+          style={[
+            styles.input,
+            { backgroundColor: theme.backgroundElement, color: theme.text },
+          ]}
         />
       </View>
 
@@ -146,7 +175,10 @@ export default function AddSaveScreen() {
           placeholder="bjj, technique, guard-pass"
           placeholderTextColor={theme.textSecondary}
           autoCapitalize="none"
-          style={[styles.input, { backgroundColor: theme.backgroundElement, color: theme.text }]}
+          style={[
+            styles.input,
+            { backgroundColor: theme.backgroundElement, color: theme.text },
+          ]}
         />
       </View>
 
@@ -157,16 +189,27 @@ export default function AddSaveScreen() {
         <View style={styles.chips}>
           <Pressable onPress={() => setCategoryId(null)}>
             <ThemedView
-              type={categoryId === null ? 'backgroundSelected' : 'backgroundElement'}
-              style={styles.chip}>
+              type={
+                categoryId === null ? "backgroundSelected" : "backgroundElement"
+              }
+              style={styles.chip}
+            >
               <ThemedText type="small">None</ThemedText>
             </ThemedView>
           </Pressable>
           {categories.map((category) => (
-            <Pressable key={category.id} onPress={() => setCategoryId(category.id)}>
+            <Pressable
+              key={category.id}
+              onPress={() => setCategoryId(category.id)}
+            >
               <ThemedView
-                type={categoryId === category.id ? 'backgroundSelected' : 'backgroundElement'}
-                style={styles.chip}>
+                type={
+                  categoryId === category.id
+                    ? "backgroundSelected"
+                    : "backgroundElement"
+                }
+                style={styles.chip}
+              >
                 <ThemedText type="small">{category.name}</ThemedText>
               </ThemedView>
             </Pressable>
@@ -202,11 +245,14 @@ export default function AddSaveScreen() {
         style={[
           styles.saveButton,
           { backgroundColor: theme.text, opacity: canSave ? 1 : 0.5 },
-        ]}>
+        ]}
+      >
         {isSaving ? (
           <ActivityIndicator color={theme.background} />
         ) : (
-          <Text style={[styles.saveButtonText, { color: theme.background }]}>Save</Text>
+          <Text style={[styles.saveButtonText, { color: theme.background }]}>
+            Save
+          </Text>
         )}
       </Pressable>
     </ScrollView>
@@ -214,23 +260,35 @@ export default function AddSaveScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: Spacing.three, gap: Spacing.three, paddingBottom: Spacing.six },
+  content: {
+    padding: Spacing.three,
+    gap: Spacing.three,
+    paddingBottom: Spacing.six,
+  },
   field: { gap: Spacing.one },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   input: {
     borderRadius: 12,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one },
-  chip: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.one, borderRadius: 999 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.one },
+  chip: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: 999,
+  },
   saveButton: {
     borderRadius: 14,
     paddingVertical: Spacing.three,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: Spacing.two,
   },
-  saveButtonText: { fontSize: 16, fontWeight: '600' },
+  saveButtonText: { fontSize: 16, fontWeight: "600" },
 });

@@ -1,8 +1,8 @@
-import { useUser } from '@clerk/expo';
-import { useEffect, useState } from 'react';
+import { useUser } from "@clerk/expo";
+import { useEffect, useState } from "react";
 
-import { useSupabaseClient } from '@/lib/supabase';
-import type { Profile } from '@/lib/database.types';
+import type { Profile } from "@/lib/database.types";
+import { useSupabaseClient } from "@/lib/supabase";
 
 /**
  * Ensures a `profiles` row exists for the signed-in Clerk user (there's no
@@ -27,7 +27,7 @@ export function useProfile() {
 
     async function ensureProfile() {
       const { data, error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .upsert(
           {
             id: user!.id,
@@ -35,14 +35,13 @@ export function useProfile() {
             display_name: user!.fullName ?? null,
             avatar_url: user!.imageUrl ?? null,
           },
-          { onConflict: 'id', ignoreDuplicates: false },
+          { onConflict: "id", ignoreDuplicates: false },
         )
         .select()
         .single();
 
       if (cancelled) return;
       if (error) {
-        console.error('Failed to load profile', error);
         setIsLoading(false);
         return;
       }
@@ -56,7 +55,7 @@ export function useProfile() {
     return () => {
       cancelled = true;
     };
-  }, [user, supabase]);
+  }, [user?.id, supabase]);
 
   return { profile, isLoading };
 }

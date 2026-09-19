@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import { useSupabaseClient } from '@/lib/supabase';
-import type { Save } from '@/lib/database.types';
+import type { Save } from "@/lib/database.types";
+import { useSupabaseClient } from "@/lib/supabase";
 
 export function useSaves() {
   const supabase = useSupabaseClient();
@@ -9,14 +9,15 @@ export function useSaves() {
   const [isLoading, setIsLoading] = useState(true);
 
   const refetch = useCallback(async () => {
+    console.log("Fetching saves from REFETCH");
     setIsLoading(true);
     const { data, error } = await supabase
-      .from('saves')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("saves")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error('Failed to load saves', error);
+      console.error("Failed to load saves", error);
     } else {
       setSaves(data ?? []);
     }
