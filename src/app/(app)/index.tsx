@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -33,17 +33,10 @@ export default function HomeScreen() {
   const router = useRouter();
   const theme = useTheme();
   const insets = useTabScreenInsets();
-  const { saves, isLoading, refetch } = useSaves();
+  const { saves, isLoading, isFetching, refetch } = useSaves();
   const { categories } = useCategories();
   const [query, setQuery] = useState("");
   const [platformFilter, setPlatformFilter] = useState<Platform | null>(null);
-  console.log("HOMESCREEN SAVES", saves.length);
-
-  useEffect(() => {
-    {
-      console.log("LETS RENDER AGAIN");
-    }
-  }, [saves]);
 
   const categoryNameById = useMemo(
     () => new Map(categories.map((category) => [category.id, category.name])),
@@ -75,7 +68,7 @@ export default function HomeScreen() {
           { paddingBottom: insets.bottom },
         ]}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+          <RefreshControl refreshing={isFetching} onRefresh={refetch} />
         }
         ListHeaderComponent={
           <View

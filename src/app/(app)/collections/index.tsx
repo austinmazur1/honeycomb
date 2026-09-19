@@ -1,23 +1,24 @@
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
-import { useCategories } from '@/hooks/use-categories';
-import { useSaves } from '@/hooks/use-saves';
-import { useTabScreenInsets } from '@/hooks/use-tab-screen-insets';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Spacing } from "@/constants/theme";
+import { useCategories, useCreateCategory } from "@/hooks/use-categories";
+import { useSaves } from "@/hooks/use-saves";
+import { useTabScreenInsets } from "@/hooks/use-tab-screen-insets";
+import { useTheme } from "@/hooks/use-theme";
 
 export default function CollectionsScreen() {
   const router = useRouter();
   const theme = useTheme();
   const insets = useTabScreenInsets();
-  const { categories, createCategory } = useCategories();
+  const { categories } = useCategories();
+  const createCategory = useCreateCategory();
   const { saves } = useSaves();
   const [isAdding, setIsAdding] = useState(false);
-  const [newName, setNewName] = useState('');
+  const [newName, setNewName] = useState("");
 
   const countByCategoryId = useMemo(() => {
     const counts = new Map<string, number>();
@@ -39,7 +40,11 @@ export default function CollectionsScreen() {
         name: category.name,
         count: countByCategoryId.counts.get(category.id) ?? 0,
       })),
-      { id: 'uncategorized', name: 'Uncategorized', count: countByCategoryId.uncategorized },
+      {
+        id: "uncategorized",
+        name: "Uncategorized",
+        count: countByCategoryId.uncategorized,
+      },
     ],
     [categories, countByCategoryId],
   );
@@ -51,11 +56,11 @@ export default function CollectionsScreen() {
       return;
     }
     try {
-      await createCategory(name);
+      await createCategory.mutateAsync(name);
     } catch (error) {
-      console.error('Failed to create category', error);
+      console.error("Failed to create category", error);
     }
-    setNewName('');
+    setNewName("");
     setIsAdding(false);
   }
 
@@ -66,7 +71,10 @@ export default function CollectionsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={[
           styles.listContent,
-          { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom },
+          {
+            paddingTop: insets.top + Spacing.three,
+            paddingBottom: insets.bottom,
+          },
         ]}
         ListHeaderComponent={
           <ThemedText type="title" style={styles.title}>
@@ -96,7 +104,10 @@ export default function CollectionsScreen() {
                 placeholderTextColor={theme.textSecondary}
                 style={[
                   styles.input,
-                  { backgroundColor: theme.backgroundElement, color: theme.text },
+                  {
+                    backgroundColor: theme.backgroundElement,
+                    color: theme.text,
+                  },
                 ]}
               />
             ) : (
@@ -118,9 +129,9 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: Spacing.three, gap: Spacing.two },
   title: { fontSize: 32, lineHeight: 38, marginBottom: Spacing.two },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: Spacing.three,
     borderRadius: 14,
     marginBottom: Spacing.two,

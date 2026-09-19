@@ -1,12 +1,14 @@
 import { ClerkProvider, useAuth } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
+import { ShareIntentProvider } from "expo-share-intent";
 import * as SplashScreen from "expo-splash-screen";
+import { useState } from "react";
 import { useColorScheme } from "react-native";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { useProfile } from "@/hooks/use-profile";
-import { ShareIntentProvider } from "expo-share-intent/build/ShareIntentProvider";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -64,6 +66,14 @@ function AuthGate() {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { retry: 2 },
+        },
+      }),
+  );
   return (
     <ShareIntentProvider options={{ debug: __DEV__ }}>
       <ClerkProvider publishableKey={publishableKey!} tokenCache={tokenCache}>
@@ -71,7 +81,9 @@ export default function RootLayout() {
           value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
         >
           <AnimatedSplashOverlay />
-          <AuthGate />
+          <QueryClientProvider client={queryClient}>
+            <AuthGate />
+          </QueryClientProvider>
         </ThemeProvider>
       </ClerkProvider>
     </ShareIntentProvider>

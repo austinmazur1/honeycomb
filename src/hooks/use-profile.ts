@@ -1,8 +1,9 @@
 import { useUser } from "@clerk/expo";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import type { Profile } from "@/lib/database.types";
+import { queryKeys } from "@/lib/query-keys";
 import { useSupabaseClient } from "@/lib/supabase";
+import { ensureAndFetchProfile } from "@/lib/supabase-queries";
 
 /**
  * Ensures a `profiles` row exists for the signed-in Clerk user (there's no
@@ -12,50 +13,16 @@ import { useSupabaseClient } from "@/lib/supabase";
 export function useProfile() {
   const { user } = useUser();
   const supabase = useSupabaseClient();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      setIsLoading(false);
-      return;
-    }
+  // `supabase` is a stable module-level singleton and `user` is deliberately
+  // not keyed on directly (its reference isn't stable across renders) — the
+  // key is `user?.id` instead, so neither belongs in the queryKey.
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps
+  const query = useQuery({
+    queryKey: queryKeys.profile(user?.id),
+    queryFn: () => ensureAndFetchProfile(supabase, user!),
+    enabled: !!user?.id,
+  });
 
-    let cancelled = false;
-    setIsLoading(true);
-
-    async function ensureProfile() {
-      const { data, error } = await supabase
-        .from("profiles")
-        .upsert(
-          {
-            id: user!.id,
-            email: user!.primaryEmailAddress?.emailAddress ?? null,
-            display_name: user!.fullName ?? null,
-            avatar_url: user!.imageUrl ?? null,
-          },
-          { onConflict: "id", ignoreDuplicates: false },
-        )
-        .select()
-        .single();
-
-      if (cancelled) return;
-      if (error) {
-        setIsLoading(false);
-        return;
-      }
-
-      setProfile(data);
-      setIsLoading(false);
-    }
-
-    ensureProfile();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, supabase]);
-
-  return { profile, isLoading };
+  return { profile: query.data ?? null, isLoading: query.isPending };
 }

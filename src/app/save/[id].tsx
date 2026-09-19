@@ -1,5 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -15,10 +15,12 @@ import WebView from "react-native-webview";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
+import { useDeleteSave } from "@/hooks/use-saves";
 import { useTheme } from "@/hooks/use-theme";
-import type { Save } from "@/lib/database.types";
 import { PLATFORM_LABELS, isEmbeddable } from "@/lib/platform";
+import { queryKeys } from "@/lib/query-keys";
 import { useSupabaseClient } from "@/lib/supabase";
+import { fetchSave } from "@/lib/supabase-queries";
 
 function getYouTubeEmbedUrl(url: string): string | null {
   try {
@@ -54,38 +56,24 @@ export default function SaveDetailScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const supabase = useSupabaseClient();
+  const deleteSave = useDeleteSave();
 
-  const [save, setSave] = useState<Save | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    console.log("Loading save detail for id", id);
-    let cancelled = false;
-    async function load() {
-      const { data, error } = await supabase
-        .from("saves")
-        .select("*")
-        .eq("id", id)
-        .single();
-      if (cancelled) return;
-      if (error) console.error("Failed to load save", error);
-      setSave(data ?? null);
-      setIsLoading(false);
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, supabase]);
+  // `supabase` is a stable module-level singleton, not a cache-differentiating value.
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps
+  const { data: save, isPending: isLoading } = useQuery({
+    queryKey: queryKeys.save(id),
+    queryFn: () => fetchSave(supabase, id!),
+    enabled: !!id,
+  });
 
   async function handleDelete() {
     if (!save) return;
-    const { error } = await supabase.from("saves").delete().eq("id", save.id);
-    if (error) {
+    try {
+      await deleteSave.mutateAsync(save.id);
+      router.back();
+    } catch (error) {
       console.error("Failed to delete save", error);
-      return;
     }
-    router.back();
   }
 
   if (isLoading) {

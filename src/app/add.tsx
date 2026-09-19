@@ -1,5 +1,3 @@
-import { useCategories } from "@/hooks/use-categories";
-import { useSupabaseClient } from "@/lib/supabase";
 import { useUser } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useShareIntentContext } from "expo-share-intent";
@@ -18,6 +16,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
+import { useCategories, useCreateCategory } from "@/hooks/use-categories";
+import { useCreateSave } from "@/hooks/use-saves";
 import { useTheme } from "@/hooks/use-theme";
 import { fetchLinkMetadata } from "@/lib/link-metadata";
 import { inferPlatform } from "@/lib/platform";
@@ -27,8 +27,9 @@ export default function AddSaveScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useUser();
-  const supabase = useSupabaseClient();
-  const { categories, createCategory } = useCategories();
+  const { categories } = useCategories();
+  const createCategory = useCreateCategory();
+  const createSave = useCreateSave();
   const { hasShareIntent, shareIntent, resetShareIntent } =
     useShareIntentContext();
 
@@ -40,7 +41,6 @@ export default function AddSaveScreen() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const consumedShareIntent = useRef(false);
 
   async function lookupMetadata(sourceUrl: string) {
@@ -64,7 +64,7 @@ export default function AddSaveScreen() {
     setNewCategoryName("");
     if (!name) return;
     try {
-      const category = await createCategory(name);
+      const category = await createCategory.mutateAsync(name);
       setCategoryId(category.id);
     } catch (error) {
       console.error("Failed to create category", error);
@@ -74,27 +74,24 @@ export default function AddSaveScreen() {
   async function handleSave() {
     const trimmedUrl = url.trim();
     if (!trimmedUrl || !user) return;
-    setIsSaving(true);
     const tags = tagsText
       .split(",")
       .map((tag) => tag.trim())
       .filter(Boolean);
-    const { error } = await supabase.from("saves").insert({
-      owner_user_id: user.id,
-      url: trimmedUrl,
-      platform: inferPlatform(trimmedUrl),
-      title: title.trim() || null,
-      thumbnail_url: thumbnailUrl,
-      category_id: categoryId,
-      tags,
-    });
-    setIsSaving(false);
-    if (error) {
+    try {
+      await createSave.mutateAsync({
+        owner_user_id: user.id,
+        url: trimmedUrl,
+        platform: inferPlatform(trimmedUrl),
+        title: title.trim() || null,
+        thumbnail_url: thumbnailUrl,
+        category_id: categoryId,
+        tags,
+      });
+      router.back();
+    } catch (error) {
       console.error("Failed to save", error);
-      return;
     }
-    router.prefetch("/(app)");
-    router.back();
   }
 
   // Prefill from the OS share sheet, once, the first time a share intent shows up.
@@ -115,7 +112,7 @@ export default function AddSaveScreen() {
     };
   }, [resetShareIntent]);
 
-  const canSave = url.trim().length > 0 && !isSaving;
+  const canSave = url.trim().length > 0 && !createSave.isPending;
 
   return (
     <ScrollView
@@ -247,7 +244,7 @@ export default function AddSaveScreen() {
           { backgroundColor: theme.text, opacity: canSave ? 1 : 0.5 },
         ]}
       >
-        {isSaving ? (
+        {createSave.isPending ? (
           <ActivityIndicator color={theme.background} />
         ) : (
           <Text style={[styles.saveButtonText, { color: theme.background }]}>
