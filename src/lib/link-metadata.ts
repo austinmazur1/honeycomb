@@ -69,11 +69,21 @@ async function fetchOpenGraph(url: string): Promise<LinkMetadata> {
   const response = await fetch(url, { headers: { 'User-Agent': 'facebookexternalhit/1.1' } });
   if (!response.ok) return EMPTY_METADATA;
   const html = await response.text();
+  const ogImage = matchMetaContent(html, 'og:image');
   return {
     title: matchMetaContent(html, 'og:title') ?? matchTitleTag(html),
     description: matchMetaContent(html, 'og:description'),
-    thumbnailUrl: matchMetaContent(html, 'og:image'),
+    thumbnailUrl: resolveUrl(ogImage, url),
     authorName: matchMetaContent(html, 'og:site_name'),
     raw: null,
   };
+}
+
+function resolveUrl(maybeUrl: string | null, baseUrl: string): string | null {
+  if (!maybeUrl) return null;
+  try {
+    return new URL(maybeUrl, baseUrl).toString();
+  } catch {
+    return null;
+  }
 }
