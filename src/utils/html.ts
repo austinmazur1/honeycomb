@@ -1,3 +1,16 @@
+const HTML_ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&apos;': "'",
+  '&lt;': '<',
+  '&gt;': '>',
+};
+
+function decodeHtmlEntities(value: string): string {
+  return value.replace(/&amp;|&quot;|&#39;|&apos;|&lt;|&gt;/g, (entity) => HTML_ENTITIES[entity]);
+}
+
 export function matchMetaContent(html: string, property: string): string | null {
   const pattern = new RegExp(
     `<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']*)["']`,
@@ -7,7 +20,8 @@ export function matchMetaContent(html: string, property: string): string | null 
     `<meta[^>]+content=["']([^"']*)["'][^>]+property=["']${property}["']`,
     'i',
   );
-  return html.match(pattern)?.[1] ?? html.match(altPattern)?.[1] ?? null;
+  const match = html.match(pattern)?.[1] ?? html.match(altPattern)?.[1] ?? null;
+  return match ? decodeHtmlEntities(match) : null;
 }
 
 export function matchTitleTag(html: string): string | null {
