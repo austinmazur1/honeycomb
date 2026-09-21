@@ -7,7 +7,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useState } from "react";
 import { useColorScheme } from "react-native";
 
-import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { AnimatedSplashOverlay } from "@/components";
 import { useProfile } from "@/hooks/use-profile";
 
 SplashScreen.preventAutoHideAsync();
