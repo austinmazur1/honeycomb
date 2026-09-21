@@ -1,4 +1,6 @@
 import { inferPlatform } from '@/lib/platform';
+import { matchMetaContent, matchTitleTag, stripHtml } from '@/utils/html';
+import { truncate } from '@/utils/string';
 
 export type LinkMetadata = {
   title: string | null;
@@ -74,31 +76,4 @@ async function fetchOpenGraph(url: string): Promise<LinkMetadata> {
     authorName: matchMetaContent(html, 'og:site_name'),
     raw: null,
   };
-}
-
-function matchMetaContent(html: string, property: string): string | null {
-  const pattern = new RegExp(
-    `<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']*)["']`,
-    'i',
-  );
-  const altPattern = new RegExp(
-    `<meta[^>]+content=["']([^"']*)["'][^>]+property=["']${property}["']`,
-    'i',
-  );
-  return html.match(pattern)?.[1] ?? html.match(altPattern)?.[1] ?? null;
-}
-
-function matchTitleTag(html: string): string | null {
-  return html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() ?? null;
-}
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function truncate(text: string, maxLength: number): string {
-  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
