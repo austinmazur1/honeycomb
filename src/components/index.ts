@@ -3,6 +3,7 @@ export { default as AppTabs } from "./app-tabs";
 export { ExternalLink } from "./external-link";
 export { HintRow } from "./hint-row";
 export { SaveCard } from "./save-card";
+export { TagFilter } from "./tag-filter";
 export { ThemedText, type ThemedTextProps } from "./themed-text";
 export { ThemedView, type ThemedViewProps } from "./themed-view";
 export { WebBadge } from "./web-badge";
