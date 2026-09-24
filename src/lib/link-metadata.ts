@@ -1,6 +1,6 @@
-import { inferPlatform } from '@/lib/platform';
-import { matchMetaContent, matchTitleTag, stripHtml } from '@/utils/html';
-import { truncate } from '@/utils/string';
+import type { Platform } from '@/lib/database.types';
+import { hasCaptionInsteadOfTitle, inferPlatform } from '@/lib/platform';
+import { matchMetaContent, matchTitleTag, parseInstagramOgTitle, stripHtml } from '@/utils/html';
 
 export type LinkMetadata = {
   title: string | null;
@@ -27,13 +27,26 @@ export async function fetchLinkMetadata(url: string): Promise<LinkMetadata> {
   const platform = inferPlatform(url);
 
   try {
-    if (platform === 'youtube') return await fetchOEmbed(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
-    if (platform === 'x') return await fetchTwitterOEmbed(url);
-    return await fetchOpenGraph(url);
+    const metadata = await fetchForPlatform(url, platform);
+    // Social posts don't have titles, just captions. Keep the caption as the description
+    // and leave the title empty so a quick save doesn't end up titled with a wall of hashtags.
+    if (hasCaptionInsteadOfTitle(platform)) {
+      return { ...metadata, title: null, description: metadata.description ?? metadata.title };
+    }
+    return metadata;
   } catch (error) {
     console.warn('Link metadata fetch failed', error);
     return EMPTY_METADATA;
   }
+}
+
+async function fetchForPlatform(url: string, platform: Platform): Promise<LinkMetadata> {
+  if (platform === 'youtube') return fetchOEmbed(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+  if (platform === 'x') return fetchTwitterOEmbed(url);
+  if (platform === 'instagram') return fetchInstagram(url);
+  // LinkedIn's og:site_name is just "LinkedIn", which isn't an author.
+  if (platform === 'linkedin') return { ...(await fetchOpenGraph(url)), authorName: null };
+  return fetchOpenGraph(url);
 }
 
 async function fetchOEmbed(oEmbedUrl: string): Promise<LinkMetadata> {
@@ -57,7 +70,7 @@ async function fetchTwitterOEmbed(url: string): Promise<LinkMetadata> {
   const data = await response.json();
   const text = typeof data.html === 'string' ? stripHtml(data.html) : null;
   return {
-    title: text ? truncate(text, 120) : (data.author_name ?? null),
+    title: text,
     description: text,
     thumbnailUrl: null,
     authorName: data.author_name ?? null,
@@ -76,6 +89,17 @@ async function fetchOpenGraph(url: string): Promise<LinkMetadata> {
     thumbnailUrl: resolveUrl(ogImage, url),
     authorName: matchMetaContent(html, 'og:site_name'),
     raw: null,
+  };
+}
+
+async function fetchInstagram(url: string): Promise<LinkMetadata> {
+  const metadata = await fetchOpenGraph(url);
+  // og:site_name is just "Instagram"; the poster's name and the caption live in og:title.
+  const { author, caption } = metadata.title ? parseInstagramOgTitle(metadata.title) : { author: null, caption: null };
+  return {
+    ...metadata,
+    description: caption ?? metadata.description,
+    authorName: author,
   };
 }
 

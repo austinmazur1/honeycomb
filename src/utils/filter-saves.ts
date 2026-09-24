@@ -13,7 +13,13 @@ export function filterSaves(
     const categoryName = save.category_id
       ? (categoryNameById.get(save.category_id) ?? "")
       : "";
-    const haystack = [save.title, categoryName, ...save.tags]
+    const haystack = [
+      save.title,
+      save.description,
+      save.author_name,
+      categoryName,
+      ...save.tags,
+    ]
       .join(" ")
       .toLowerCase();
     return haystack.includes(q);

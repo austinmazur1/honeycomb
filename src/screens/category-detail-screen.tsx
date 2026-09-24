@@ -49,6 +49,7 @@ export default function CategoryDetailScreen() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
+        numColumns={2}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom }]}
         ListHeaderComponent={
           tags.length > 0 ? (
@@ -78,8 +79,10 @@ export default function CategoryDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { paddingVertical: Spacing.three },
-  itemWrapper: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.two },
-  tagFilter: { marginBottom: Spacing.two },
+  listContent: { paddingVertical: Spacing.three, paddingHorizontal: Spacing.three - Spacing.one },
+  // Half-width cells with padding as the gutter, so an odd last tile doesn't stretch.
+  itemWrapper: { width: '50%', padding: Spacing.one },
+  // TagFilter brings its own horizontal padding; cancel the grid's so they line up.
+  tagFilter: { marginBottom: Spacing.one, marginHorizontal: -(Spacing.three - Spacing.one) },
   empty: { padding: Spacing.four, alignItems: 'center' },
 });

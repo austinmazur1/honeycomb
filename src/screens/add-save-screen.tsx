@@ -19,7 +19,7 @@ import { useCategories, useCreateCategory } from "@/hooks/use-categories";
 import { useCreateSave } from "@/hooks/use-saves";
 import { useTheme } from "@/hooks/use-theme";
 import { fetchLinkMetadata } from "@/lib/link-metadata";
-import { inferPlatform } from "@/lib/platform";
+import { hasCaptionInsteadOfTitle, inferPlatform } from "@/lib/platform";
 
 export default function AddSaveScreen() {
   const router = useRouter();
@@ -39,16 +39,34 @@ export default function AddSaveScreen() {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [description, setDescription] = useState<string | null>(null);
+  const [authorName, setAuthorName] = useState<string | null>(null);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   const consumedShareIntent = useRef(false);
 
+  function clearFetchedMetadata() {
+    setThumbnailUrl(null);
+    setDescription(null);
+    setAuthorName(null);
+  }
+
+  function handleUrlChange(text: string) {
+    setUrl(text);
+    clearFetchedMetadata(); // a new URL means the old caption/author/thumbnail no longer apply
+  }
+
   async function lookupMetadata(sourceUrl: string) {
+    setThumbnailUrl(null);
+    setDescription(null);
+    setAuthorName(null);
     setIsFetchingMetadata(true);
     const metadata = await fetchLinkMetadata(sourceUrl);
     setIsFetchingMetadata(false);
 
     if (metadata.title) setTitle((current) => current || metadata.title!);
     if (metadata.thumbnailUrl) setThumbnailUrl(metadata.thumbnailUrl);
+    if (metadata.description) setDescription(metadata.description);
+    if (metadata.authorName) setAuthorName(metadata.authorName);
   }
 
   async function handleUrlBlur() {
@@ -84,6 +102,8 @@ export default function AddSaveScreen() {
         platform: inferPlatform(trimmedUrl),
         title: title.trim() || null,
         thumbnail_url: thumbnailUrl,
+        description,
+        author_name: authorName,
         category_id: categoryId,
         tags,
       });
@@ -100,7 +120,10 @@ export default function AddSaveScreen() {
     const sharedUrl = shareIntent.webUrl ?? shareIntent.text ?? "";
     if (!sharedUrl) return;
     setUrl(sharedUrl);
-    if (shareIntent.meta?.title) setTitle(shareIntent.meta.title);
+    // The share sheet's "title" for social posts is the caption — don't use it as a title.
+    if (shareIntent.meta?.title && !hasCaptionInsteadOfTitle(inferPlatform(sharedUrl))) {
+      setTitle(shareIntent.meta.title);
+    }
     lookupMetadata(sharedUrl);
   }, [hasShareIntent, shareIntent]);
 
@@ -128,7 +151,7 @@ export default function AddSaveScreen() {
         </ThemedText>
         <TextInput
           value={url}
-          onChangeText={setUrl}
+          onChangeText={handleUrlChange}
           onBlur={handleUrlBlur}
           placeholder="https://..."
           placeholderTextColor={theme.textSecondary}
