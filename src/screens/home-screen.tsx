@@ -52,9 +52,11 @@ export default function HomeScreen() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
+        numColumns={2}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: insets.bottom },
+          // Leave room for the FAB so it doesn't sit on the last row's footer.
+          { paddingBottom: insets.bottom + Spacing.six + Spacing.three },
         ]}
         refreshControl={
           <RefreshControl refreshing={isFetching} onRefresh={refetch} />
@@ -139,10 +141,13 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { paddingBottom: Spacing.six * 2 },
+  listContent: {
+    paddingHorizontal: Spacing.three - Spacing.one,
+  },
   header: {
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.one,
     paddingTop: Spacing.three,
+    paddingBottom: Spacing.one,
     gap: Spacing.two,
   },
   title: { fontSize: 32, lineHeight: 38 },
@@ -158,7 +163,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
     borderRadius: 999,
   },
-  itemWrapper: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two },
+  // Half-width cells with padding as the gutter, so an odd last tile doesn't stretch.
+  itemWrapper: { width: "50%", padding: Spacing.one },
   empty: { padding: Spacing.four, alignItems: "center" },
   fab: {
     position: "absolute",

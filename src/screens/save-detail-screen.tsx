@@ -110,7 +110,10 @@ export default function SaveDetailScreen() {
       )}
 
       <View style={styles.body}>
-        <ThemedText type="subtitle">{save.title || save.url}</ThemedText>
+        <ThemedText type="subtitle">{save.title || save.author_name || save.url}</ThemedText>
+        {save.description ? (
+          <ThemedText themeColor="textSecondary">{save.description}</ThemedText>
+        ) : null}
         {save.tags.length > 0 && (
           <View style={styles.tags}>
             {save.tags.map((tag) => (
