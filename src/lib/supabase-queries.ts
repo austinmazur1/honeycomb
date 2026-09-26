@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Category, Database, Profile, Save } from "@/lib/database.types";
+import { decodeHtmlEntities } from "@/utils/html";
 
 type DB = SupabaseClient<Database>;
 
@@ -34,6 +35,16 @@ export async function ensureAndFetchProfile(
   return data;
 }
 
+/** Older saves were stored with raw HTML entities ("&#x26a0") in their scraped text; clean them on read. */
+function decodeSaveText(save: Save): Save {
+  return {
+    ...save,
+    title: save.title && decodeHtmlEntities(save.title),
+    description: save.description && decodeHtmlEntities(save.description),
+    author_name: save.author_name && decodeHtmlEntities(save.author_name),
+  };
+}
+
 export async function fetchSaves(supabase: DB): Promise<Save[]> {
   const { data, error } = await supabase
     .from("saves")
@@ -41,7 +52,7 @@ export async function fetchSaves(supabase: DB): Promise<Save[]> {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map(decodeSaveText);
 }
 
 export async function fetchSave(supabase: DB, id: string): Promise<Save | null> {
@@ -52,7 +63,7 @@ export async function fetchSave(supabase: DB, id: string): Promise<Save | null> 
     .single();
 
   if (error) throw error;
-  return data ?? null;
+  return data ? decodeSaveText(data) : null;
 }
 
 export async function insertSave(
@@ -62,6 +73,22 @@ export async function insertSave(
   const { data, error } = await supabase
     .from("saves")
     .insert(save)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateSave(
+  supabase: DB,
+  id: string,
+  patch: Database["public"]["Tables"]["saves"]["Update"],
+): Promise<Save> {
+  const { data, error } = await supabase
+    .from("saves")
+    .update(patch)
+    .eq("id", id)
     .select()
     .single();
 

@@ -25,11 +25,6 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
   other: 'Other',
 };
 
-/** Platforms with a confirmed working, no-auth inline embed path. Everything else deep-links out. */
-export function isEmbeddable(platform: Platform): boolean {
-  return platform === 'youtube' || platform === 'x';
-}
-
 /**
  * Platforms whose link metadata "title" is really the post caption (long, emoji/hashtag-heavy).
  * For these we keep the caption as the description and leave the title for the user to write.
