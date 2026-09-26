@@ -1,10 +1,11 @@
-import type { ReactElement } from "react";
+import type { ReactElement, Ref } from "react";
 import { FlatList, StyleSheet, View, type FlatListProps } from "react-native";
 
 import { GRID_CELL_PADDING, GRID_COLUMNS, GRID_INSET } from "@/components/grid.constants";
 
 export type GridProps<T> = Omit<FlatListProps<T>, "numColumns" | "renderItem"> & {
   renderItem: (item: T) => ReactElement;
+  ref?: Ref<FlatList<T>>;
 };
 
 /** Two-column tile grid lined up with the screen margin. Other props pass through to the FlatList. */
