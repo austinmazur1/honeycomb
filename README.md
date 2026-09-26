@@ -1,56 +1,131 @@
-# Welcome to your Expo app 👋
+# Honeycomb
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A personal link library for the posts you actually want to come back to. Share a link from Instagram, X, YouTube, LinkedIn, or anywhere else into Honeycomb, and it's saved with its title, thumbnail, and author, ready to be tagged, annotated, and filed into collections.
 
-## Get started
+Built with Expo (SDK 57) and Expo Router, with Clerk for sign-in and Supabase for storage.
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+- **Save from the share sheet.** Honeycomb registers as a share target, so you can send a link to it from any app. It opens straight into the save form.
+- **Automatic metadata.** Titles, thumbnails, and authors are pre-filled from oEmbed (YouTube, X) or Open Graph (everything else). For caption-style posts on Instagram, X, and LinkedIn, the caption goes in the description and the title is left for you to write.
+- **Search and filter.** The home grid searches across saves and filters by platform.
+- **Collections.** Group saves into categories, shown as a cover-image grid.
+- **Inline editing.** Edit the title, tags, notes, and collection on the detail screen, then share the link back out.
+- **Invite-only access.** New accounts wait on a "pending approval" screen until they're approved.
+- **Account management.** The profile screen shows stats and lets you sign out or permanently delete your account and data.
 
-2. Start the app
+## Tech stack
 
-   ```bash
-   npx expo start
-   ```
+| Concern | Choice |
+| --- | --- |
+| App framework | [Expo](https://docs.expo.dev/versions/v57.0.0/) SDK 57, React Native 0.86, React 19, React Compiler |
+| Routing | [Expo Router](https://docs.expo.dev/router/introduction/) with typed routes |
+| Auth | [Clerk](https://clerk.com/docs/quickstarts/expo) (`@clerk/expo`), with Google and Apple sign-in |
+| Data | [Supabase](https://supabase.com/docs) Postgres, accessed with `@supabase/supabase-js` |
+| Server state | [TanStack Query](https://tanstack.com/query/latest) |
+| Share target | [`expo-share-intent`](https://github.com/achorein/expo-share-intent) |
+| Builds | [EAS Build](https://docs.expo.dev/build/introduction/) |
 
-In the output, you'll find options to open the app in a
+### How auth works
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Clerk owns identity. Supabase trusts Clerk's session JWTs through [Supabase Third-Party Auth](https://supabase.com/docs/guides/auth/third-party/clerk), so there's no shared secret and no Supabase `auth.users` row. The Supabase client (`src/lib/supabase.ts`) attaches the current Clerk token to every request.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+On sign-in, the app upserts a `profiles` row for the Clerk user. Supabase has no trigger that could do this under Third-Party Auth. `AuthGate` (`src/components/auth-gate.tsx`) then routes the user:
 
-## Get a fresh project
+- not signed in → `sign-in`
+- signed in, `profiles.is_approved = false` → `pending-approval`
+- signed in and approved → the main app
 
-When you're ready, run:
+## Getting started
+
+### Prerequisites
+
+- Node 22 (EAS builds are pinned to `22.23.2`)
+- Xcode for iOS and/or Android Studio for Android
+- A Clerk application and a Supabase project
+
+Honeycomb uses native modules, including the share extension, that Expo Go doesn't include, so you need a **development build**. Expo Go won't work.
+
+### 1. Install
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Configure environment
 
-### Other setup steps
+```bash
+cp .env.example .env
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+| Variable | Where to find it |
+| --- | --- |
+| `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk Dashboard → API Keys |
+| `EXPO_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Project Settings → API |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Project Settings → API |
 
-## Learn more
+The app throws on launch if any of these are missing.
 
-To learn more about developing your project with Expo, look at the following resources:
+### 3. Set up Clerk and Supabase
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+1. In Clerk, enable the **Google** and **Apple** social connections.
+2. In Supabase, go to **Authentication → Sign In / Providers → Third-Party Auth** and add Clerk as a provider. Follow [Supabase's Clerk guide](https://supabase.com/docs/guides/auth/third-party/clerk), which also covers the Clerk side.
+3. Create the three tables in `public`. `src/lib/database.types.ts` holds the column-level source of truth:
+   - `profiles`: `id` (the Clerk user ID), `email`, `display_name`, `avatar_url`, `is_approved` (default `false`), `created_at`
+   - `categories`: `id`, `owner_user_id → profiles.id`, `name`, `color`, `created_at`
+   - `saves`: `id`, `owner_user_id → profiles.id`, `category_id → categories.id`, `url`, `platform` (`instagram | x | youtube | linkedin | other`), `title`, `description`, `thumbnail_url`, `author_name`, `tags text[]`, `notes`, `raw_metadata jsonb`, `created_at`, `updated_at`
+4. Enable row-level security on every table, scoped to the Clerk user ID from the JWT (`auth.jwt() ->> 'sub'`). A user should only be able to read and write their own `profiles` row and the rows where they're the `owner_user_id`.
 
-## Join the community
+### 4. Run
 
-Join our community of developers creating universal apps.
+```bash
+npx expo run:ios       # build and launch the iOS dev client
+npx expo run:android   # build and launch the Android dev client
+npx expo         # start for an already-installed dev client
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+`ios/` and `android/` are generated by prebuild and gitignored.
+
+### 5. Approve yourself
+
+After your first sign-in you'll land on the pending approval screen. Set `is_approved = true` on your row in the Supabase `profiles` table, then reopen the app.
+
+## Project structure
+
+```
+src/
+├── app/            Expo Router routes (thin files that render screens)
+│   ├── (app)/      Tab group: home, collections, profile
+│   ├── add.tsx     "Save Link" modal (also the share-intent landing route)
+│   ├── save/[id]   Save detail modal
+│   └── +native-intent.ts   Redirects share-intent deep links to /add
+├── screens/        Screen components
+├── components/     Shared components; ui/ holds the generic primitives
+├── hooks/          Data hooks (saves, categories, profile) and UI hooks
+├── lib/            Supabase client and queries, link metadata, platform detection, query keys
+├── utils/          Pure helpers (filtering, tags, HTML parsing)
+└── constants/      Theme and collection constants
+```
+
+Conventions: one component per file, with related constants in a sibling `*.constants.ts` file. Platform-specific variants use the `.web.tsx` suffix.
+
+## Scripts
+
+| Command | What it does |
+| --- | --- |
+| `npx expo` | Start the dev server |
+| `npx expo run:ios` / `npx expo run:android` | Build and run the native dev client |
+| `npm run web` | Start the web build |
+| `npm run lint` | Run ESLint (`eslint-config-expo` plus the TanStack Query plugin) |
+
+## Building with EAS
+
+`eas.json` defines three profiles:
+
+```bash
+eas build --profile development   # internal dev client
+eas build --profile preview       # internal distribution
+eas build --profile production    # store build, auto-incrementing version
+```
+
+Set the `EXPO_PUBLIC_*` variables as [EAS environment variables](https://docs.expo.dev/eas/environment-variables/) so they're available at build time.
