@@ -1,9 +1,9 @@
-import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { Pill, TextField } from "@/components";
 import { Spacing } from "@/constants/theme";
-import { useCategories, useCreateCategory } from "@/hooks/use-categories";
+import { useCategories } from "@/hooks/use-categories";
+import { useNewCategoryInput } from "@/hooks/use-new-category-input";
 
 type CategoryPickerProps = {
   selectedId: string | null;
@@ -13,22 +13,9 @@ type CategoryPickerProps = {
 /** Chip row of the user's categories, with "None" and an inline "+ New" that creates and selects one. */
 export function CategoryPicker({ selectedId, onSelect }: CategoryPickerProps) {
   const { categories } = useCategories();
-  const createCategory = useCreateCategory();
-  const [isAdding, setIsAdding] = useState(false);
-  const [newName, setNewName] = useState("");
-
-  async function handleAddCategory() {
-    const name = newName.trim();
-    setIsAdding(false);
-    setNewName("");
-    if (!name) return;
-    try {
-      const category = await createCategory.mutateAsync(name);
-      onSelect(category.id);
-    } catch (error) {
-      console.error("Failed to create category", error);
-    }
-  }
+  const newCategory = useNewCategoryInput({
+    onCreated: (category) => onSelect(category.id),
+  });
 
   return (
     <View style={styles.container}>
@@ -46,22 +33,12 @@ export function CategoryPicker({ selectedId, onSelect }: CategoryPickerProps) {
             onPress={() => onSelect(category.id)}
           />
         ))}
-        {!isAdding && (
-          <Pill
-            label="+ New"
-            onPress={() => setIsAdding(true)}
-          />
+        {!newCategory.isAdding && (
+          <Pill label="+ New" onPress={newCategory.start} />
         )}
       </View>
-      {isAdding && (
-        <TextField
-          autoFocus
-          value={newName}
-          onChangeText={setNewName}
-          onSubmitEditing={handleAddCategory}
-          onBlur={handleAddCategory}
-          placeholder="New category name"
-        />
+      {newCategory.isAdding && (
+        <TextField {...newCategory.inputProps} placeholder="New category name" />
       )}
     </View>
   );

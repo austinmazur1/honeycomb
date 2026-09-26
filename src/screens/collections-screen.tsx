@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import {
@@ -12,7 +12,8 @@ import {
 } from "@/components";
 import { GRID_CELL_PADDING } from "@/components/grid.constants";
 import { Radius, Spacing } from "@/constants/theme";
-import { useCategories, useCreateCategory } from "@/hooks/use-categories";
+import { useCategories } from "@/hooks/use-categories";
+import { useNewCategoryInput } from "@/hooks/use-new-category-input";
 import { useSaves } from "@/hooks/use-saves";
 import { useTabScreenInsets } from "@/hooks/use-tab-screen-insets";
 import { useTheme } from "@/hooks/use-theme";
@@ -29,10 +30,8 @@ export default function CollectionsScreen() {
   const theme = useTheme();
   const insets = useTabScreenInsets();
   const { categories } = useCategories();
-  const createCategory = useCreateCategory();
   const { saves } = useSaves();
-  const [isAdding, setIsAdding] = useState(false);
-  const [newName, setNewName] = useState("");
+  const newCategory = useNewCategoryInput();
 
   const items = useMemo<GridItem[]>(
     () => [
@@ -45,31 +44,12 @@ export default function CollectionsScreen() {
     [categories, saves],
   );
 
-  async function handleAddCategory() {
-    const name = newName.trim();
-    if (!name) {
-      setIsAdding(false);
-      return;
-    }
-    try {
-      await createCategory.mutateAsync(name);
-    } catch (error) {
-      console.error("Failed to create category", error);
-    }
-    setNewName("");
-    setIsAdding(false);
-  }
-
   function renderNewTile() {
-    if (isAdding) {
+    if (newCategory.isAdding) {
       return (
         <ThemedView type="backgroundElement" style={styles.newTile}>
           <TextField
-            autoFocus
-            value={newName}
-            onChangeText={setNewName}
-            onSubmitEditing={handleAddCategory}
-            onBlur={handleAddCategory}
+            {...newCategory.inputProps}
             placeholder="Collection name"
             style={styles.input}
           />
@@ -77,7 +57,7 @@ export default function CollectionsScreen() {
       );
     }
     return (
-      <Pressable onPress={() => setIsAdding(true)} style={styles.newTileHit}>
+      <Pressable onPress={newCategory.start} style={styles.newTileHit}>
         <View
           style={[
             styles.newTile,
