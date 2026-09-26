@@ -1,16 +1,23 @@
-import { useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
 
-import { ThemedText, ThemedView } from "@/components";
+import { CollectionCard, ThemedText, ThemedView } from "@/components";
 import { Spacing } from "@/constants/theme";
 import { useCategories, useCreateCategory } from "@/hooks/use-categories";
 import { useSaves } from "@/hooks/use-saves";
 import { useTabScreenInsets } from "@/hooks/use-tab-screen-insets";
 import { useTheme } from "@/hooks/use-theme";
+import {
+  summarizeCollections,
+  type CollectionSummary,
+} from "@/utils/collection-summaries";
+
+type GridItem =
+  | { kind: "collection"; collection: CollectionSummary }
+  | { kind: "new" };
 
 export default function CollectionsScreen() {
-  const router = useRouter();
   const theme = useTheme();
   const insets = useTabScreenInsets();
   const { categories } = useCategories();
@@ -19,33 +26,15 @@ export default function CollectionsScreen() {
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState("");
 
-  const countByCategoryId = useMemo(() => {
-    const counts = new Map<string, number>();
-    let uncategorized = 0;
-    for (const save of saves) {
-      if (save.category_id) {
-        counts.set(save.category_id, (counts.get(save.category_id) ?? 0) + 1);
-      } else {
-        uncategorized += 1;
-      }
-    }
-    return { counts, uncategorized };
-  }, [saves]);
-
-  const rows = useMemo(
+  const items = useMemo<GridItem[]>(
     () => [
-      ...categories.map((category) => ({
-        id: category.id,
-        name: category.name,
-        count: countByCategoryId.counts.get(category.id) ?? 0,
+      ...summarizeCollections(categories, saves).map((collection) => ({
+        kind: "collection" as const,
+        collection,
       })),
-      {
-        id: "uncategorized",
-        name: "Uncategorized",
-        count: countByCategoryId.uncategorized,
-      },
+      { kind: "new" },
     ],
-    [categories, countByCategoryId],
+    [categories, saves],
   );
 
   async function handleAddCategory() {
@@ -63,11 +52,49 @@ export default function CollectionsScreen() {
     setIsAdding(false);
   }
 
+  function renderNewTile() {
+    if (isAdding) {
+      return (
+        <ThemedView type="backgroundElement" style={styles.newTile}>
+          <TextInput
+            autoFocus
+            value={newName}
+            onChangeText={setNewName}
+            onSubmitEditing={handleAddCategory}
+            onBlur={handleAddCategory}
+            placeholder="Collection name"
+            placeholderTextColor={theme.textSecondary}
+            style={[styles.input, { color: theme.text }]}
+          />
+        </ThemedView>
+      );
+    }
+    return (
+      <Pressable onPress={() => setIsAdding(true)} style={styles.newTileHit}>
+        <View
+          style={[
+            styles.newTile,
+            styles.newTileIdle,
+            { borderColor: theme.backgroundSelected },
+          ]}
+        >
+          <Ionicons name="add" size={28} color={theme.textSecondary} />
+          <ThemedText type="small" themeColor="textSecondary">
+            New collection
+          </ThemedText>
+        </View>
+      </Pressable>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
       <FlatList
-        data={rows}
-        keyExtractor={(item) => item.id}
+        data={items}
+        keyExtractor={(item) =>
+          item.kind === "collection" ? item.collection.id : "new"
+        }
+        numColumns={2}
         contentContainerStyle={[
           styles.listContent,
           {
@@ -81,43 +108,14 @@ export default function CollectionsScreen() {
           </ThemedText>
         }
         renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(`/collections/${item.id}`)}>
-            <ThemedView type="backgroundElement" style={styles.row}>
-              <ThemedText type="smallBold">{item.name}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {item.count}
-              </ThemedText>
-            </ThemedView>
-          </Pressable>
-        )}
-        ListFooterComponent={
-          <View style={styles.footer}>
-            {isAdding ? (
-              <TextInput
-                autoFocus
-                value={newName}
-                onChangeText={setNewName}
-                onSubmitEditing={handleAddCategory}
-                onBlur={handleAddCategory}
-                placeholder="Category name"
-                placeholderTextColor={theme.textSecondary}
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: theme.backgroundElement,
-                    color: theme.text,
-                  },
-                ]}
-              />
+          <View style={styles.itemWrapper}>
+            {item.kind === "collection" ? (
+              <CollectionCard collection={item.collection} />
             ) : (
-              <Pressable onPress={() => setIsAdding(true)}>
-                <ThemedView type="backgroundElement" style={styles.row}>
-                  <ThemedText type="smallBold">+ New category</ThemedText>
-                </ThemedView>
-              </Pressable>
+              renderNewTile()
             )}
           </View>
-        }
+        )}
       />
     </ThemedView>
   );
@@ -125,20 +123,29 @@ export default function CollectionsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { paddingHorizontal: Spacing.three, gap: Spacing.two },
-  title: { fontSize: 32, lineHeight: 38, marginBottom: Spacing.two },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: Spacing.three,
-    borderRadius: 14,
+  listContent: { paddingHorizontal: Spacing.three - Spacing.one },
+  title: {
+    fontSize: 32,
+    lineHeight: 38,
     marginBottom: Spacing.two,
+    paddingHorizontal: Spacing.one,
   },
-  footer: { marginTop: Spacing.one },
-  input: {
+  // Half-width cells with padding as the gutter, so an odd last tile doesn't stretch.
+  itemWrapper: { width: "50%", padding: Spacing.one },
+  newTileHit: { flex: 1 },
+  // Stretches to match a neighbouring card's height; minHeight covers a tile alone on its row.
+  newTile: {
+    flex: 1,
+    minHeight: 160,
     borderRadius: 14,
+    justifyContent: "center",
     padding: Spacing.three,
-    fontSize: 16,
   },
+  newTileIdle: {
+    alignItems: "center",
+    gap: Spacing.one,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+  },
+  input: { fontSize: 16, textAlign: "center" },
 });
