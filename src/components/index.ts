@@ -1,5 +1,7 @@
-export { AnimatedIcon, AnimatedSplashOverlay } from "./animated-icon";
+export { AnimatedIcon } from "./animated-icon";
+export { AnimatedSplashOverlay } from "./animated-splash-overlay";
 export { default as AppTabs } from "./app-tabs";
+export { AuthGate } from "./auth-gate";
 export { CategoryPicker } from "./category-picker";
 export { CollectionCard } from "./collection-card";
 export { EditableText } from "./editable-text";
@@ -7,6 +9,7 @@ export { ExternalLink } from "./external-link";
 export { FilterPills } from "./filter-pills";
 export { Grid } from "./grid";
 export { HintRow } from "./hint-row";
+export { NewCollectionTile } from "./new-collection-tile";
 export { SaveCard } from "./save-card";
 export { SaveGrid } from "./save-grid";
 export { TagEditor } from "./tag-editor";
