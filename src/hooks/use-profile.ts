@@ -1,9 +1,9 @@
 import { useUser } from "@clerk/expo";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/lib/query-keys";
 import { useSupabaseClient } from "@/lib/supabase";
-import { ensureAndFetchProfile } from "@/lib/supabase-queries";
+import { deleteAccountData, ensureAndFetchProfile } from "@/lib/supabase-queries";
 
 /**
  * Ensures a `profiles` row exists for the signed-in Clerk user (there's no
@@ -25,4 +25,24 @@ export function useProfile() {
   });
 
   return { profile: query.data ?? null, isLoading: query.isPending };
+}
+
+/**
+ * Permanently deletes the user's data and then their Clerk account. Data goes
+ * first because the Clerk session is what authorizes the Supabase deletes;
+ * deleting the Clerk user ends that session, which sends the app to sign-in.
+ */
+export function useDeleteAccount() {
+  const { user } = useUser();
+  const supabase = useSupabaseClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not signed in");
+      await deleteAccountData(supabase, user.id);
+      await user.delete();
+    },
+    onSuccess: () => queryClient.clear(),
+  });
 }

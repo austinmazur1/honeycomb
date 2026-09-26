@@ -35,6 +35,36 @@ export async function ensureAndFetchProfile(
   return data;
 }
 
+/**
+ * Deletes every row the user owns, children before the profile they reference.
+ * RLS silently skips rows it won't let you delete, so the profile is checked
+ * afterwards: once it's gone, the foreign keys guarantee saves and categories are too.
+ * Safe to re-run if a previous attempt got partway.
+ */
+export async function deleteAccountData(supabase: DB, userId: string): Promise<void> {
+  const saves = await supabase.from("saves").delete().eq("owner_user_id", userId);
+  if (saves.error) throw saves.error;
+
+  const categories = await supabase
+    .from("categories")
+    .delete()
+    .eq("owner_user_id", userId);
+  if (categories.error) throw categories.error;
+
+  const profile = await supabase.from("profiles").delete().eq("id", userId);
+  if (profile.error) throw profile.error;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (data) {
+    throw new Error("Profile row wasn't deleted — check the profiles DELETE policy");
+  }
+}
+
 /** Older saves were stored with raw HTML entities ("&#x26a0") in their scraped text; clean them on read. */
 function decodeSaveText(save: Save): Save {
   return {
