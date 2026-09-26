@@ -1,6 +1,7 @@
 export { AnimatedIcon, AnimatedSplashOverlay } from "./animated-icon";
 export { default as AppTabs } from "./app-tabs";
 export { CategoryPicker } from "./category-picker";
+export { CollectionCard } from "./collection-card";
 export { EditableText } from "./editable-text";
 export { ExternalLink } from "./external-link";
 export { HintRow } from "./hint-row";
