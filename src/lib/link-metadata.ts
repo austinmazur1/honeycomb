@@ -1,4 +1,10 @@
 import type { Platform } from '@/lib/database.types';
+import {
+  EMPTY_METADATA,
+  OPEN_GRAPH_USER_AGENT,
+  X_OEMBED_ENDPOINT,
+  YOUTUBE_OEMBED_ENDPOINT,
+} from '@/lib/link-metadata.constants';
 import { hasCaptionInsteadOfTitle, inferPlatform } from '@/lib/platform';
 import { matchMetaContent, matchTitleTag, parseInstagramOgTitle, stripHtml } from '@/utils/html';
 
@@ -8,14 +14,6 @@ export type LinkMetadata = {
   thumbnailUrl: string | null;
   authorName: string | null;
   raw: Record<string, unknown> | null;
-};
-
-const EMPTY_METADATA: LinkMetadata = {
-  title: null,
-  description: null,
-  thumbnailUrl: null,
-  authorName: null,
-  raw: null,
 };
 
 /**
@@ -41,7 +39,7 @@ export async function fetchLinkMetadata(url: string): Promise<LinkMetadata> {
 }
 
 async function fetchForPlatform(url: string, platform: Platform): Promise<LinkMetadata> {
-  if (platform === 'youtube') return fetchOEmbed(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+  if (platform === 'youtube') return fetchOEmbed(`${YOUTUBE_OEMBED_ENDPOINT}?url=${encodeURIComponent(url)}&format=json`);
   if (platform === 'x') return fetchTwitterOEmbed(url);
   if (platform === 'instagram') return fetchInstagram(url);
   // LinkedIn's og:site_name is just "LinkedIn", which isn't an author.
@@ -64,7 +62,7 @@ async function fetchOEmbed(oEmbedUrl: string): Promise<LinkMetadata> {
 
 async function fetchTwitterOEmbed(url: string): Promise<LinkMetadata> {
   const response = await fetch(
-    `https://publish.x.com/oembed?url=${encodeURIComponent(url)}&omit_script=true`,
+    `${X_OEMBED_ENDPOINT}?url=${encodeURIComponent(url)}&omit_script=true`,
   );
   if (!response.ok) return EMPTY_METADATA;
   const data = await response.json();
@@ -79,7 +77,7 @@ async function fetchTwitterOEmbed(url: string): Promise<LinkMetadata> {
 }
 
 async function fetchOpenGraph(url: string): Promise<LinkMetadata> {
-  const response = await fetch(url, { headers: { 'User-Agent': 'facebookexternalhit/1.1' } });
+  const response = await fetch(url, { headers: { 'User-Agent': OPEN_GRAPH_USER_AGENT } });
   if (!response.ok) return EMPTY_METADATA;
   const html = await response.text();
   const ogImage = matchMetaContent(html, 'og:image');

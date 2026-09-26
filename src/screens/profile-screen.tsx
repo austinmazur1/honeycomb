@@ -14,18 +14,13 @@ import {
 } from 'react-native';
 
 import { ThemedText, ThemedView } from '@/components';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useCategories } from '@/hooks/use-categories';
 import { useDeleteAccount } from '@/hooks/use-profile';
 import { useSaves } from '@/hooks/use-saves';
 import { useTabScreenInsets } from '@/hooks/use-tab-screen-insets';
 import { useTheme } from '@/hooks/use-theme';
-
-const DESTRUCTIVE = '#E5484D';
-
-function plural(count: number, noun: string) {
-  return `${count} ${noun}${count === 1 ? '' : 's'}`;
-}
+import { pluralize } from '@/utils/string';
 
 export default function ProfileScreen() {
   const { user } = useUser();
@@ -59,7 +54,7 @@ export default function ProfileScreen() {
 
   function confirmDeleteAccount() {
     const title = 'Delete your account?';
-    const message = `This permanently deletes your account, ${plural(saves.length, 'save')} and ${plural(categories.length, 'collection')}. This can't be undone.`;
+    const message = `This permanently deletes your account, ${pluralize(saves.length, 'save')} and ${pluralize(categories.length, 'collection')}. This can't be undone.`;
     if (Platform.OS === 'web') {
       if (globalThis.confirm?.(`${title}\n\n${message}`)) {
         void handleDeleteAccount();
@@ -128,8 +123,8 @@ export default function ProfileScreen() {
               onPress={confirmDeleteAccount}
               disabled={deleteAccount.isPending}
               style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.backgroundSelected }]}>
-              <Ionicons name="trash-outline" size={20} color={DESTRUCTIVE} />
-              <ThemedText style={[styles.rowLabel, { color: DESTRUCTIVE }]}>
+              <Ionicons name="trash-outline" size={20} color={theme.destructive} />
+              <ThemedText themeColor="destructive" style={styles.rowLabel}>
                 Delete account
               </ThemedText>
               {deleteAccount.isPending && <ActivityIndicator size="small" />}
@@ -172,7 +167,7 @@ const styles = StyleSheet.create({
   },
   stat: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     paddingVertical: Spacing.three,
     alignItems: 'center',
   },
@@ -193,7 +188,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
   },
   group: {
-    borderRadius: 14,
+    borderRadius: Radius.card,
     overflow: 'hidden',
   },
   row: {

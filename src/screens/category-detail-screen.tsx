@@ -1,8 +1,10 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { SaveCard, TagFilter, ThemedText, ThemedView } from '@/components';
+import { EmptyState, FilterPills, SaveGrid, ThemedView } from '@/components';
+import { GRID_INSET } from '@/components/grid.constants';
+import { UNCATEGORIZED_ID, UNCATEGORIZED_LABEL } from '@/constants/collections';
 import { Spacing } from '@/constants/theme';
 import { useCategories } from '@/hooks/use-categories';
 import { useSaves } from '@/hooks/use-saves';
@@ -20,9 +22,9 @@ export default function CategoryDetailScreen() {
     setSelectedTag(null);
   }
 
-  const isUncategorized = categoryId === 'uncategorized';
+  const isUncategorized = categoryId === UNCATEGORIZED_ID;
   const category = categories.find((c) => c.id === categoryId);
-  const title = isUncategorized ? 'Uncategorized' : (category?.name ?? 'Collection');
+  const title = isUncategorized ? UNCATEGORIZED_LABEL : (category?.name ?? 'Collection');
 
   const categorySaves = useMemo(
     () =>
@@ -46,30 +48,19 @@ export default function CategoryDetailScreen() {
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ title }} />
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
+      <SaveGrid
+        saves={filtered}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom }]}
         ListHeaderComponent={
           tags.length > 0 ? (
             <View style={styles.tagFilter}>
-              <TagFilter tags={tags} selectedTag={selectedTag} onSelectTag={setSelectedTag} />
+              <FilterPills options={tags} selected={selectedTag} onSelect={setSelectedTag} allLabel="All" />
             </View>
           ) : null
         }
-        renderItem={({ item }) => (
-          <View style={styles.itemWrapper}>
-            <SaveCard save={item} />
-          </View>
-        )}
         ListEmptyComponent={
           !isLoading ? (
-            <View style={styles.empty}>
-              <ThemedText themeColor="textSecondary">
-                {selectedTag ? `No saves tagged "${selectedTag}".` : 'Nothing here yet.'}
-              </ThemedText>
-            </View>
+            <EmptyState message={selectedTag ? `No saves tagged "${selectedTag}".` : 'Nothing here yet.'} />
           ) : null
         }
       />
@@ -79,10 +70,7 @@ export default function CategoryDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { paddingVertical: Spacing.three, paddingHorizontal: Spacing.three - Spacing.one },
-  // Half-width cells with padding as the gutter, so an odd last tile doesn't stretch.
-  itemWrapper: { width: '50%', padding: Spacing.one },
-  // TagFilter brings its own horizontal padding; cancel the grid's so they line up.
-  tagFilter: { marginBottom: Spacing.one, marginHorizontal: -(Spacing.three - Spacing.one) },
-  empty: { padding: Spacing.four, alignItems: 'center' },
+  listContent: { paddingVertical: Spacing.three },
+  // FilterPills brings its own horizontal padding; cancel the grid's so they line up.
+  tagFilter: { marginBottom: Spacing.one, marginHorizontal: -GRID_INSET },
 });

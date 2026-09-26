@@ -2,18 +2,10 @@ import { useUser } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useShareIntentContext } from "expo-share-intent";
 import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { CategoryPicker, ThemedText } from "@/components";
+import { Button, CategoryPicker, Section, TextField } from "@/components";
 import { Spacing } from "@/constants/theme";
 import { useCreateSave } from "@/hooks/use-saves";
 import { useTheme } from "@/hooks/use-theme";
@@ -125,85 +117,50 @@ export default function AddSaveScreen() {
       ]}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.field}>
-        <ThemedText type="small" themeColor="textSecondary">
-          Link
-        </ThemedText>
-        <TextInput
+      <Section label="Link" style={styles.field}>
+        <TextField
           value={url}
           onChangeText={handleUrlChange}
           onBlur={handleUrlBlur}
           placeholder="https://..."
-          placeholderTextColor={theme.textSecondary}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
-          style={[
-            styles.input,
-            { backgroundColor: theme.backgroundElement, color: theme.text },
-          ]}
         />
-      </View>
+      </Section>
 
-      <View style={styles.field}>
-        <View style={styles.rowBetween}>
-          <ThemedText type="small" themeColor="textSecondary">
-            Title
-          </ThemedText>
-          {isFetchingMetadata && <ActivityIndicator size="small" />}
-        </View>
-        <TextInput
+      <Section
+        label="Title"
+        accessory={isFetchingMetadata && <ActivityIndicator size="small" />}
+        style={styles.field}
+      >
+        <TextField
           value={title}
           onChangeText={setTitle}
           placeholder="What is this?"
-          placeholderTextColor={theme.textSecondary}
-          style={[
-            styles.input,
-            { backgroundColor: theme.backgroundElement, color: theme.text },
-          ]}
         />
-      </View>
+      </Section>
 
-      <View style={styles.field}>
-        <ThemedText type="small" themeColor="textSecondary">
-          Tags (comma separated)
-        </ThemedText>
-        <TextInput
+      <Section label="Tags (comma separated)" style={styles.field}>
+        <TextField
           value={tagsText}
           onChangeText={setTagsText}
           placeholder="bjj, technique, guard-pass"
-          placeholderTextColor={theme.textSecondary}
           autoCapitalize="none"
-          style={[
-            styles.input,
-            { backgroundColor: theme.backgroundElement, color: theme.text },
-          ]}
         />
-      </View>
+      </Section>
 
-      <View style={styles.field}>
-        <ThemedText type="small" themeColor="textSecondary">
-          Category
-        </ThemedText>
+      <Section label="Category" style={styles.field}>
         <CategoryPicker selectedId={categoryId} onSelect={setCategoryId} />
-      </View>
+      </Section>
 
-      <Pressable
+      <Button
+        label="Save"
         onPress={handleSave}
         disabled={!canSave}
-        style={[
-          styles.saveButton,
-          { backgroundColor: theme.text, opacity: canSave ? 1 : 0.5 },
-        ]}
-      >
-        {createSave.isPending ? (
-          <ActivityIndicator color={theme.background} />
-        ) : (
-          <Text style={[styles.saveButtonText, { color: theme.background }]}>
-            Save
-          </Text>
-        )}
-      </Pressable>
+        loading={createSave.isPending}
+        style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+      />
     </ScrollView>
   );
 }
@@ -215,23 +172,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
   },
   field: { gap: Spacing.one },
-  rowBetween: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  input: {
-    borderRadius: 12,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
-  },
-  saveButton: {
-    borderRadius: 14,
-    paddingVertical: Spacing.three,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: Spacing.two,
-  },
-  saveButtonText: { fontSize: 16, fontWeight: "600" },
+  saveButton: { marginTop: Spacing.two },
+  saveButtonDisabled: { opacity: 0.5 },
 });
