@@ -1,8 +1,11 @@
 export { AnimatedIcon, AnimatedSplashOverlay } from "./animated-icon";
 export { default as AppTabs } from "./app-tabs";
+export { CategoryPicker } from "./category-picker";
+export { EditableText } from "./editable-text";
 export { ExternalLink } from "./external-link";
 export { HintRow } from "./hint-row";
 export { SaveCard } from "./save-card";
+export { TagEditor } from "./tag-editor";
 export { TagFilter } from "./tag-filter";
 export { ThemedText, type ThemedTextProps } from "./themed-text";
 export { ThemedView, type ThemedViewProps } from "./themed-view";

@@ -13,21 +13,19 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ThemedText, ThemedView } from "@/components";
+import { CategoryPicker, ThemedText } from "@/components";
 import { Spacing } from "@/constants/theme";
-import { useCategories, useCreateCategory } from "@/hooks/use-categories";
 import { useCreateSave } from "@/hooks/use-saves";
 import { useTheme } from "@/hooks/use-theme";
 import { fetchLinkMetadata } from "@/lib/link-metadata";
 import { hasCaptionInsteadOfTitle, inferPlatform } from "@/lib/platform";
+import { parseTags } from "@/utils/tags";
 
 export default function AddSaveScreen() {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useUser();
-  const { categories } = useCategories();
-  const createCategory = useCreateCategory();
   const createSave = useCreateSave();
   const { hasShareIntent, shareIntent, resetShareIntent } =
     useShareIntentContext();
@@ -36,8 +34,6 @@ export default function AddSaveScreen() {
   const [title, setTitle] = useState("");
   const [tagsText, setTagsText] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [description, setDescription] = useState<string | null>(null);
   const [authorName, setAuthorName] = useState<string | null>(null);
@@ -75,26 +71,10 @@ export default function AddSaveScreen() {
     await lookupMetadata(trimmed);
   }
 
-  async function handleAddCategory() {
-    const name = newCategoryName.trim();
-    setIsAddingCategory(false);
-    setNewCategoryName("");
-    if (!name) return;
-    try {
-      const category = await createCategory.mutateAsync(name);
-      setCategoryId(category.id);
-    } catch (error) {
-      console.error("Failed to create category", error);
-    }
-  }
-
   async function handleSave() {
     const trimmedUrl = url.trim();
     if (!trimmedUrl || !user) return;
-    const tags = tagsText
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean);
+    const tags = parseTags(tagsText);
     try {
       await createSave.mutateAsync({
         owner_user_id: user.id,
@@ -205,57 +185,7 @@ export default function AddSaveScreen() {
         <ThemedText type="small" themeColor="textSecondary">
           Category
         </ThemedText>
-        <View style={styles.chips}>
-          <Pressable onPress={() => setCategoryId(null)}>
-            <ThemedView
-              type={
-                categoryId === null ? "backgroundSelected" : "backgroundElement"
-              }
-              style={styles.chip}
-            >
-              <ThemedText type="small">None</ThemedText>
-            </ThemedView>
-          </Pressable>
-          {categories.map((category) => (
-            <Pressable
-              key={category.id}
-              onPress={() => setCategoryId(category.id)}
-            >
-              <ThemedView
-                type={
-                  categoryId === category.id
-                    ? "backgroundSelected"
-                    : "backgroundElement"
-                }
-                style={styles.chip}
-              >
-                <ThemedText type="small">{category.name}</ThemedText>
-              </ThemedView>
-            </Pressable>
-          ))}
-          {!isAddingCategory && (
-            <Pressable onPress={() => setIsAddingCategory(true)}>
-              <ThemedView type="backgroundElement" style={styles.chip}>
-                <ThemedText type="small">+ New</ThemedText>
-              </ThemedView>
-            </Pressable>
-          )}
-        </View>
-        {isAddingCategory && (
-          <TextInput
-            autoFocus
-            value={newCategoryName}
-            onChangeText={setNewCategoryName}
-            onSubmitEditing={handleAddCategory}
-            onBlur={handleAddCategory}
-            placeholder="New category name"
-            placeholderTextColor={theme.textSecondary}
-            style={[
-              styles.input,
-              { backgroundColor: theme.backgroundElement, color: theme.text },
-            ]}
-          />
-        )}
+        <CategoryPicker selectedId={categoryId} onSelect={setCategoryId} />
       </View>
 
       <Pressable
@@ -295,12 +225,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
-  },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.one },
-  chip: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-    borderRadius: 999,
   },
   saveButton: {
     borderRadius: 14,

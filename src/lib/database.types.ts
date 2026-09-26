@@ -66,6 +66,7 @@ export interface Database {
           thumbnail_url: string | null;
           author_name: string | null;
           tags: string[];
+          notes: string | null;
           raw_metadata: Record<string, unknown> | null;
           created_at: string;
           updated_at: string;
@@ -81,6 +82,7 @@ export interface Database {
           thumbnail_url?: string | null;
           author_name?: string | null;
           tags?: string[];
+          notes?: string | null;
           raw_metadata?: Record<string, unknown> | null;
           created_at?: string;
           updated_at?: string;

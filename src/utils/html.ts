@@ -1,16 +1,43 @@
-const HTML_ENTITIES: Record<string, string> = {
-  '&amp;': '&',
-  '&quot;': '"',
-  '&apos;': "'",
-  '&lt;': '<',
-  '&gt;': '>',
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&',
+  quot: '"',
+  apos: "'",
+  lt: '<',
+  gt: '>',
+  nbsp: ' ',
+  hellip: '…',
+  mdash: '—',
+  ndash: '–',
+  lsquo: '‘',
+  rsquo: '’',
+  ldquo: '“',
+  rdquo: '”',
+  bull: '•',
+  middot: '·',
+  copy: '©',
+  reg: '®',
+  trade: '™',
 };
 
-function decodeHtmlEntities(value: string): string {
-  return value
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
-    .replace(/&amp;|&quot;|&apos;|&lt;|&gt;/g, (entity) => HTML_ENTITIES[entity]);
+// Numeric entities may omit the trailing ";" (sites really do send "&#x26a0"); named ones must have it.
+const ENTITY_PATTERN = /&#x([0-9a-f]+);?|&#(\d+);?|&([a-z]+);/gi;
+const MAX_CODE_POINT = 0x10ffff;
+
+function decodeOnce(value: string): string {
+  return value.replace(ENTITY_PATTERN, (entity, hex?: string, decimal?: string, name?: string) => {
+    if (name) return NAMED_ENTITIES[name.toLowerCase()] ?? entity;
+    const codePoint = hex ? parseInt(hex, 16) : Number(decimal);
+    return codePoint > 0 && codePoint <= MAX_CODE_POINT ? String.fromCodePoint(codePoint) : entity;
+  });
+}
+
+/**
+ * "Heads up &#x26a0 it&amp;#39;s here" -> "Heads up ⚠ it's here".
+ * Runs a second pass because captions often arrive double-encoded ("&amp;#x1f525;").
+ */
+export function decodeHtmlEntities(value: string): string {
+  const once = decodeOnce(value);
+  return once === value ? once : decodeOnce(once);
 }
 
 export function matchMetaContent(html: string, property: string): string | null {
@@ -24,12 +51,12 @@ export function matchMetaContent(html: string, property: string): string | null 
 }
 
 export function matchTitleTag(html: string): string | null {
-  return html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() ?? null;
+  const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim();
+  return title ? decodeHtmlEntities(title) : null;
 }
 
 export function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, ' ')
+  return decodeHtmlEntities(html.replace(/<[^>]+>/g, ' '))
     .replace(/\s+/g, ' ')
     .trim();
 }
