@@ -21,26 +21,33 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   CategoryPicker,
   EditableText,
+  IconButton,
+  Pill,
+  Section,
   TagEditor,
+  TextButton,
   ThemedText,
   ThemedView,
 } from "@/components";
-import { Spacing } from "@/constants/theme";
+import { Radius, Spacing } from "@/constants/theme";
 import { useCategories } from "@/hooks/use-categories";
 import { useDeleteSave, useUpdateSave } from "@/hooks/use-saves";
 import { useTheme } from "@/hooks/use-theme";
 import type { Save } from "@/lib/database.types";
 import { fetchLinkMetadata } from "@/lib/link-metadata";
-import { PLATFORM_LABELS } from "@/lib/platform";
+import { PLATFORM_LABELS } from "@/lib/platform.constants";
 import { queryKeys } from "@/lib/query-keys";
 import { useSupabaseClient } from "@/lib/supabase";
 import { fetchSave } from "@/lib/supabase-queries";
 import { displayHost } from "@/utils/string";
 
-/** Keeps very tall images from pushing everything else off screen; the viewer shows them in full. */
-const MIN_IMAGE_ASPECT_RATIO = 9 / 16;
-const DESCRIPTION_PREVIEW_LINES = 4;
-const DESCRIPTION_COLLAPSE_THRESHOLD = 240;
+import {
+  DEFAULT_IMAGE_ASPECT_RATIO,
+  DESCRIPTION_COLLAPSE_THRESHOLD,
+  DESCRIPTION_PREVIEW_LINES,
+  MIN_IMAGE_ASPECT_RATIO,
+  PLACEHOLDER_ASPECT_RATIO,
+} from "./save-detail-screen.constants";
 
 type SavePatch = Partial<Omit<Save, "id" | "owner_user_id" | "created_at">>;
 
@@ -197,17 +204,17 @@ export default function SaveDetailScreen() {
               ? undefined
               : () => (
                   <View style={styles.headerActions}>
-                    <HeaderIconButton
+                    <IconButton
                       icon="share-outline"
                       label="Share"
                       onPress={handleShare}
                     />
-                    <HeaderIconButton
+                    <IconButton
                       icon="refresh"
                       label="Refresh preview"
                       onPress={handleRefreshPreview}
                     />
-                    <HeaderIconButton
+                    <IconButton
                       icon="trash-outline"
                       label="Delete save"
                       onPress={confirmDelete}
@@ -270,7 +277,7 @@ export default function SaveDetailScreen() {
                   {
                     backgroundColor: theme.backgroundElement,
                     aspectRatio: Math.max(
-                      imageAspectRatio ?? 4 / 5,
+                      imageAspectRatio ?? DEFAULT_IMAGE_ASPECT_RATIO,
                       MIN_IMAGE_ASPECT_RATIO,
                     ),
                   },
@@ -345,8 +352,13 @@ export default function SaveDetailScreen() {
 
           <Section
             label="Category"
-            onDone={
-              isEditingCategory ? () => setIsEditingCategory(false) : undefined
+            accessory={
+              isEditingCategory && (
+                <TextButton
+                  label="Done"
+                  onPress={() => setIsEditingCategory(false)}
+                />
+              )
             }
           >
             {isEditingCategory ? (
@@ -363,21 +375,21 @@ export default function SaveDetailScreen() {
                 onPress={() => setIsEditingCategory(true)}
                 style={styles.pillRow}
               >
-                <ThemedView type="backgroundElement" style={styles.pill}>
-                  <ThemedText
-                    type="small"
-                    themeColor={category ? "text" : "textSecondary"}
-                  >
-                    {category?.name ?? "No category"}
-                  </ThemedText>
-                </ThemedView>
+                <Pill
+                  label={category?.name ?? "No category"}
+                  muted={!category}
+                />
               </Pressable>
             )}
           </Section>
 
           <Section
             label="Tags"
-            onDone={isEditingTags ? () => setIsEditingTags(false) : undefined}
+            accessory={
+              isEditingTags && (
+                <TextButton label="Done" onPress={() => setIsEditingTags(false)} />
+              )
+            }
           >
             {isEditingTags ? (
               <TagEditor
@@ -390,21 +402,9 @@ export default function SaveDetailScreen() {
                 style={styles.pillRow}
               >
                 {current.tags.length > 0 ? (
-                  current.tags.map((tag) => (
-                    <ThemedView
-                      key={tag}
-                      type="backgroundElement"
-                      style={styles.pill}
-                    >
-                      <ThemedText type="small">{tag}</ThemedText>
-                    </ThemedView>
-                  ))
+                  current.tags.map((tag) => <Pill key={tag} label={tag} />)
                 ) : (
-                  <ThemedView type="backgroundElement" style={styles.pill}>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      + Add tags
-                    </ThemedText>
-                  </ThemedView>
+                  <Pill label="+ Add tags" muted />
                 )}
               </Pressable>
             )}
@@ -440,58 +440,15 @@ function formatMeta(save: Save, sourceLabel: string): string {
     .join(" · ");
 }
 
-function Section({
-  label,
-  onDone,
-  children,
-}: {
-  label: string;
-  onDone?: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <ThemedText type="small" themeColor="textSecondary">
-          {label}
-        </ThemedText>
-        {onDone && (
-          <Pressable onPress={onDone} hitSlop={8}>
-            <ThemedText type="smallBold">Done</ThemedText>
-          </Pressable>
-        )}
-      </View>
-      {children}
-    </View>
-  );
-}
-
-function HeaderIconButton({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  label: string;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable onPress={onPress} hitSlop={8} accessibilityLabel={label}>
-      <Ionicons name={icon} size={22} color={theme.text} />
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: Spacing.three, gap: Spacing.four },
-  image: { width: "100%", borderRadius: 14 },
+  image: { width: "100%", borderRadius: Radius.card },
   imagePlaceholder: {
     width: "100%",
-    aspectRatio: 16 / 9,
-    borderRadius: 14,
+    aspectRatio: PLACEHOLDER_ASPECT_RATIO,
+    borderRadius: Radius.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -504,25 +461,15 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
-    borderRadius: 999,
+    borderRadius: Radius.pill,
     backgroundColor: "rgba(0,0,0,0.6)",
   },
   openBadgeText: { color: "#fff", fontSize: 13, fontWeight: "600" },
   // Rotated up-arrow reads as the familiar "opens elsewhere" ↗.
   openBadgeIcon: { transform: [{ rotate: "45deg" }] },
   section: { gap: Spacing.two },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
   metaRow: { flexDirection: "row", alignItems: "center", gap: Spacing.two },
   pillRow: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.one },
-  pill: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-    borderRadius: 999,
-  },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",

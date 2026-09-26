@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText, type ThemedTextProps } from "@/components/themed-text";
+import { TextButton } from "@/components/ui/text-button";
+import { TextField } from "@/components/ui/text-field";
 import { Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -60,7 +62,7 @@ export function EditableText({
   if (draft !== null) {
     return (
       <View style={styles.editing}>
-        <TextInput
+        <TextField
           autoFocus
           value={draft}
           onChangeText={setDraft}
@@ -70,19 +72,16 @@ export function EditableText({
           multiline
           submitBehavior={multiline ? "newline" : "blurAndSubmit"}
           placeholder={placeholder}
-          placeholderTextColor={theme.textSecondary}
           returnKeyType={multiline ? "default" : "done"}
           style={[
-            styles.input,
             multiline && styles.multiline,
             type === "subtitle" && styles.subtitleInput,
-            { backgroundColor: theme.backgroundElement, color: theme.text },
           ]}
         />
         {multiline && (
-          <Pressable onPress={commit} hitSlop={8} style={styles.done}>
-            <ThemedText type="smallBold">Done</ThemedText>
-          </Pressable>
+          <View style={styles.done}>
+            <TextButton label="Done" onPress={commit} />
+          </View>
         )}
       </View>
     );
@@ -118,12 +117,6 @@ const styles = StyleSheet.create({
   text: { flexShrink: 1 },
   pencil: { marginTop: 6 },
   editing: { gap: Spacing.one },
-  input: {
-    borderRadius: 12,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
-  },
   multiline: { minHeight: 96, textAlignVertical: "top" },
   subtitleInput: { fontSize: 32, fontWeight: "600" },
   done: { alignSelf: "flex-end" },

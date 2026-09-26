@@ -1,14 +1,12 @@
 import { useAuth } from '@clerk/expo';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedText, ThemedView } from '@/components';
+import { Button, ThemedText, ThemedView } from '@/components';
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 
 export default function PendingApprovalScreen() {
   const { signOut } = useAuth();
-  const theme = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
@@ -28,11 +26,7 @@ export default function PendingApprovalScreen() {
         </ThemedText>
       </View>
 
-      <Pressable
-        onPress={() => signOut()}
-        style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-        <Text style={[styles.buttonText, { color: theme.text }]}>Sign out</Text>
-      </Pressable>
+      <Button variant="secondary" label="Sign out" onPress={() => signOut()} />
     </ThemedView>
   );
 }
@@ -48,15 +42,5 @@ const styles = StyleSheet.create({
   },
   emoji: {
     fontSize: 40,
-  },
-  button: {
-    borderRadius: 14,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

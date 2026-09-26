@@ -1,27 +1,4 @@
-const NAMED_ENTITIES: Record<string, string> = {
-  amp: '&',
-  quot: '"',
-  apos: "'",
-  lt: '<',
-  gt: '>',
-  nbsp: ' ',
-  hellip: '…',
-  mdash: '—',
-  ndash: '–',
-  lsquo: '‘',
-  rsquo: '’',
-  ldquo: '“',
-  rdquo: '”',
-  bull: '•',
-  middot: '·',
-  copy: '©',
-  reg: '®',
-  trade: '™',
-};
-
-// Numeric entities may omit the trailing ";" (sites really do send "&#x26a0"); named ones must have it.
-const ENTITY_PATTERN = /&#x([0-9a-f]+);?|&#(\d+);?|&([a-z]+);/gi;
-const MAX_CODE_POINT = 0x10ffff;
+import { ENTITY_PATTERN, MAX_CODE_POINT, NAMED_ENTITIES } from '@/utils/html.constants';
 
 function decodeOnce(value: string): string {
   return value.replace(ENTITY_PATTERN, (entity, hex?: string, decimal?: string, name?: string) => {

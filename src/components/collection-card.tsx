@@ -5,9 +5,10 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Spacing } from "@/constants/theme";
+import { Radius, Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 import type { CollectionSummary } from "@/utils/collection-summaries";
+import { pluralize } from "@/utils/string";
 
 /** Grid tile for a collection: square collage of its newest thumbnails, name and count underneath. */
 export function CollectionCard({ collection }: { collection: CollectionSummary }) {
@@ -22,7 +23,7 @@ export function CollectionCard({ collection }: { collection: CollectionSummary }
             {collection.name}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {collection.count === 1 ? "1 save" : `${collection.count} saves`}
+            {pluralize(collection.count, "save")}
           </ThemedText>
         </View>
       </ThemedView>
@@ -52,7 +53,7 @@ function CoverCollage({ urls }: { urls: string[] }) {
       {columns.map((column, i) => (
         <View key={i} style={styles.column}>
           {column.map((url, j) => (
-            <Image key={j}source={{ uri: url }} style={styles.cell} contentFit="cover" transition={150} />
+            <Image key={j} source={{ uri: url }} style={styles.cell} contentFit="cover" transition={150} />
           ))}
         </View>
       ))}
@@ -62,7 +63,7 @@ function CoverCollage({ urls }: { urls: string[] }) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
+    borderRadius: Radius.card,
     overflow: "hidden",
   },
   cover: {

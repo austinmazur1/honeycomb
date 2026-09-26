@@ -1,23 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { Platform, Save } from '@/lib/database.types';
+import type { Save } from '@/lib/database.types';
+import { PLATFORM_ICONS } from '@/lib/platform.constants';
 import { displayHost } from '@/utils/string';
-
-const PLATFORM_ICONS: Record<Platform, ComponentProps<typeof Ionicons>['name']> = {
-  instagram: 'logo-instagram',
-  x: 'logo-x',
-  youtube: 'logo-youtube',
-  linkedin: 'logo-linkedin',
-  other: 'link',
-};
 
 /** Image-first grid tile: 4:5 image with a one-line source strip underneath. */
 export function SaveCard({ save }: { save: Save }) {
@@ -57,7 +49,7 @@ export function SaveCard({ save }: { save: Save }) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
+    borderRadius: Radius.card,
     overflow: 'hidden',
   },
   media: {

@@ -1,8 +1,6 @@
+import { UNCATEGORIZED_ID, UNCATEGORIZED_LABEL } from "@/constants/collections";
 import type { Category, Save } from "@/lib/database.types";
-
-export const UNCATEGORIZED_ID = "uncategorized";
-
-const MAX_COVER_IMAGES = 4;
+import { MAX_COVER_IMAGES } from "@/utils/collection-summaries.constants";
 
 export type CollectionSummary = {
   id: string;
@@ -31,7 +29,7 @@ export function summarizeCollections(
   }
   const uncategorized: CollectionSummary = {
     id: UNCATEGORIZED_ID,
-    name: "Uncategorized",
+    name: UNCATEGORIZED_LABEL,
     count: 0,
     coverUrls: [],
   };

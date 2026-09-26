@@ -1,18 +1,16 @@
 import { useSSO } from '@clerk/expo/experimental';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedText, ThemedView } from '@/components';
+import { Button, ThemedText, ThemedView } from '@/components';
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 
 export default function SignInScreen() {
   const { startSSOFlow } = useSSO();
   const [pendingStrategy, setPendingStrategy] = useState<'oauth_google' | 'oauth_apple' | null>(
     null,
   );
-  const theme = useTheme();
   const insets = useSafeAreaInsets();
 
   const signInWith = useCallback(
@@ -44,29 +42,19 @@ export default function SignInScreen() {
       </View>
 
       <View style={styles.buttons}>
-        <Pressable
+        <Button
+          variant="secondary"
+          label="Continue with Google"
           onPress={() => signInWith('oauth_google')}
           disabled={pendingStrategy !== null}
-          style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-          {pendingStrategy === 'oauth_google' ? (
-            <ActivityIndicator />
-          ) : (
-            <Text style={[styles.buttonText, { color: theme.text }]}>Continue with Google</Text>
-          )}
-        </Pressable>
-
-        <Pressable
+          loading={pendingStrategy === 'oauth_google'}
+        />
+        <Button
+          label="Continue with Apple"
           onPress={() => signInWith('oauth_apple')}
           disabled={pendingStrategy !== null}
-          style={[styles.button, { backgroundColor: theme.text }]}>
-          {pendingStrategy === 'oauth_apple' ? (
-            <ActivityIndicator color={theme.background} />
-          ) : (
-            <Text style={[styles.buttonText, { color: theme.background }]}>
-              Continue with Apple
-            </Text>
-          )}
-        </Pressable>
+          loading={pendingStrategy === 'oauth_apple'}
+        />
       </View>
     </ThemedView>
   );
@@ -83,15 +71,5 @@ const styles = StyleSheet.create({
   },
   buttons: {
     gap: Spacing.two,
-  },
-  button: {
-    borderRadius: 14,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
